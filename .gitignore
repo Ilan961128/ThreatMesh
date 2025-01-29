@@ -1,0 +1,33 @@
+# General
+.DS_Store
+
+# Node.js
+node_modules/
+build/
+
+# Python
+.venv/
+.env
+__pycache__/
+*.py[cod]
+
+# Environment overrides (local-only)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+env/
+
+# Logs and temporary files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Package manager cache
+.pnp/
+.pnp.js
+
+# Testing coverage
+coverage/
+cryptography/
