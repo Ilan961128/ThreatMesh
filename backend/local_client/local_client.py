@@ -17,18 +17,13 @@ def get_windows_version():
             display_version = winreg.QueryValueEx(key, "DisplayVersion")[0]  # e.g., "23H2"
             current_build = winreg.QueryValueEx(key, "CurrentBuild")[0]  # e.g., "22631"
             ubr = winreg.QueryValueEx(key, "UBR")[0]  # Update Build Revision
-            platform.version() + "." + str(ubr)
             # Correct "Windows 10" product name for builds exclusive to Windows 11
             if int(current_build) >= 22000:
                 product_name = product_name.replace("Windows 10", "Windows 11")
-
-            # Format the OS version string
-            os_version = f"{product_name} {display_version} (OS Build {current_build}.{ubr})"
-            
             return {
                 "OS": product_name,
                 "version": display_version,
-                "build": f"{current_build}.{ubr}"
+                "build": f"{platform.version()}.{ubr}"
             }
     except FileNotFoundError:
         return {"error": "Unable to fetch Windows version. Registry key not found."}
