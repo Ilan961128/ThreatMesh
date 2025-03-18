@@ -92,7 +92,7 @@ def scan() -> tuple[Response, int]:
                                 )
                             ],
                         }
-                        for installed_app in cd.installed_apps[20:30]
+                        for installed_app in cd.installed_apps[20:25]
                     ),
                 )
             ),

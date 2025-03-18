@@ -100,4 +100,4 @@ def is_application_name_in_cpe(application_name: str, cpe: Optional[CPE]) -> boo
 
 
 def is_vendor_name_in_cpe(vendor_name: str, cpe: Optional[CPE]) -> bool:
-    return (bool(cpe) and vendor_name.lower() == cpe.vendor) or not bool(vendor_name)
+    return (bool(cpe) and vendor_name.lower() == cpe.vendor) and not bool(vendor_name)

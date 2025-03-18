@@ -1,6 +1,7 @@
 from itertools import chain
 from re import Match, I as Insensitive, M as Multiline, findall, search
 from typing import Callable, Iterable, Iterator
+from src.utils import is_date
 from loguru import logger
 from pymongo.collection import Collection
 from packaging.version import Version
@@ -70,7 +71,7 @@ def get_cves_by_query(cve_collection: Collection, query: CVEQuery) -> Iterable[d
     projections = {
         "_id": 0,
         "cve.CVE_data_meta.ID": 1,
-        "cve.description.description_data.value_text": 1,
+        "cve.description.description_data.value": 1,
         "configurations.nodes.cpe_match": 1,
     }
 
@@ -151,7 +152,7 @@ def _extract_versions_from_regex(matches: list[Match]) -> tuple[Version, ...]:
             map(
                 lambda m: m.group().strip(CHARS_TO_STRIP + VERSION_PREFIX),
                 filter(
-                    lambda x: x,
+                    lambda x: x and not is_date(x.group()),
                     map(
                         lambda group: search(
                             GENERIC_VERSION_REGEX, group, flags=Insensitive | Multiline
@@ -290,13 +291,15 @@ def create_cvematch(cve: dict, query: CVEQuery) -> CVEMatch:
         ),
         Confidence("Version is in Summary", _validate_version_in_summary, 0.3),
     ]
+    if cve['cve']['CVE_data_meta']['ID'] == 'CVE-2008-0610':
+        breakpoint()
     return CVEMatch(cve, query, confidence)
 
 
 def search_vulnerabilities(
     cve_collection: Collection,
     query: CVEQuery,
-    threshhold: float = 0.6,
+    threshhold: float = 0.7,
 ) -> Iterator[CVEMatch]:
     """
     Search for vulnerabilities in versions listed and using NVD mirror DB
