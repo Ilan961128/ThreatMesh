@@ -44,7 +44,7 @@ def poll() -> tuple[Response, int]:
             collected_data = poll_endpoint(ip)
             scan_results.append({"ip": ip, "status": "Data collected successfully"})
         except Exception as e:
-            scan_results.append({"ip": ip, "status": f'Failed: {str(e)}'})
+            scan_results.append({"ip": ip, "status": f"Failed: {str(e)}"})
         else:
             collected_data_collection.update_one(
                 {"ip_address": ip}, {"$set": asdict(collected_data)}, upsert=True
@@ -79,18 +79,23 @@ def scan() -> tuple[Response, int]:
                     cve_collection, cd.os_version.query
                 )
             ],
-            "installed_apps": [
-                {
-                    "name": installed_app.name,
-                    "cves": [
-                        cvematch.cve
-                        for cvematch in search_vulnerabilities(
-                            cve_collection, installed_app.query
-                        )
-                    ],
-                }
-                for installed_app in cd.installed_apps[20:30]
-            ],
+            "installed_apps": list(
+                filter(
+                    lambda d: len(d["cves"]),
+                    (
+                        {
+                            "name": installed_app.name,
+                            "cves": [
+                                cvematch.cve
+                                for cvematch in search_vulnerabilities(
+                                    cve_collection, installed_app.query
+                                )
+                            ],
+                        }
+                        for installed_app in cd.installed_apps[20:30]
+                    ),
+                )
+            ),
         }
 
         record["vulnerabilities"] = vulns
