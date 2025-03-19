@@ -7,7 +7,7 @@ from src.collected_data import CollectedData
 
 POLL_PORT = 6612
 POLL_URL = "http://{ip_address}:{port}/"
-TIMEOUT = timedelta(seconds=10)
+TIMEOUT = timedelta(seconds=20)
 
 
 def poll_endpoint(ip_address: str) -> CollectedData:
