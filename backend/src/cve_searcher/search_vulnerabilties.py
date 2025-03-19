@@ -291,8 +291,6 @@ def create_cvematch(cve: dict, query: CVEQuery) -> CVEMatch:
         ),
         Confidence("Version is in Summary", _validate_version_in_summary, 0.3),
     ]
-    if cve['cve']['CVE_data_meta']['ID'] == 'CVE-2008-0610':
-        breakpoint()
     return CVEMatch(cve, query, confidence)
 
 
