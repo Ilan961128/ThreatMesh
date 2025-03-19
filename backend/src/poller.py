@@ -11,17 +11,29 @@ TIMEOUT = timedelta(seconds=20)  # Keep 20s timeout since client takes time
 
 def is_host_alive(ip_address: str) -> bool:
     """
-    Check if a host is reachable using ICMP ping.
+    Check if a host is reachable using ICMP ping in Windows.
     Returns:
         bool: True if host is online, False otherwise.
     """
     try:
+        logger.info(f"[DEBUG] Checking reachability for {ip_address}...")
+
         result = subprocess.run(
-            ["ping", "-c", "1", "-W", "1", ip_address],  # Linux/macOS
+            ["ping", "-n", "1", "-w", "1000", ip_address],  # Windows ping command
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
         )
-        return result.returncode == 0  # If return code is 0, the host is up
-    except Exception:
+
+        logger.info(f"[DEBUG] Ping result for {ip_address}: {result.stdout.strip()}")
+
+        if "Reply from" in result.stdout:
+            logger.info(f"[✓] Host {ip_address} is reachable.")
+            return True
+        else:
+            logger.warning(f"[!] Host {ip_address} is NOT reachable.")
+            return False
+
+    except Exception as e:
+        logger.error(f"[!] Error checking host {ip_address}: {e}")
         return False
 
 def poll_endpoint(ip_address: str) -> CollectedData:
