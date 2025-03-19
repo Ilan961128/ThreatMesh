@@ -6,6 +6,7 @@ from src.cve_searcher.search_vulnerabilties import search_vulnerabilities
 from src.mongodb import collected_data_collection, cve_collection, meta_collection
 from src.poller import poll_endpoint
 from src.utils import is_ipaddress
+from src.ip_utils import expand_ips
 from flask import Flask, Response, request, jsonify
 import asyncio
 import hypercorn.asyncio
@@ -20,41 +21,40 @@ logger.add(sys.stderr, level="INFO")
 @app.route("/poll", methods=["POST"])
 def poll() -> tuple[Response, int]:
     """
-    Poll pc endpoints, and save result to collection
+    Poll PC endpoints and save results to the collection.
 
-    Request.body: {
-        ips: [<ip_1>: str, <ip_2>: str]
+    Request.body:
+    {
+        "ips": ["192.168.1.10", "10.0.0.1-10.0.0.5", "192.168.2.0/29"]
     }
 
     Returns:
-        tuple[Response, int]: Response, http status
+        tuple[Response, int]: JSON response with scan results.
     """
+    ip_list = request.json.get("ips")
+    
+    if not ip_list or not isinstance(ip_list, list):
+        return jsonify({"error": "Invalid request. Expected a list of IPs, CIDR, or ranges."}), 400
 
-    ip_list = request.json.get("ips", None)
-    if ip_list is None:
-        return jsonify({"error": "Missing IP list, `ips`"}), 400
-    if not isinstance(ip_list, list) or not all(map(is_ipaddress, ip_list)):
-        return jsonify(
-            {"error": "Not all arguments in IP list are valid ip addresses"}
-        ), 400
+    expanded_ips = expand_ips(ip_list)
+    
+    if not expanded_ips:
+        return jsonify({"error": "No valid IPs found in request."}), 400
 
     scan_results = []
-    for ip in ip_list:
+    
+    for ip in expanded_ips:
         try:
             collected_data = poll_endpoint(ip)
             scan_results.append({"ip": ip, "status": "Data collected successfully"})
-        except Exception as e:
-            scan_results.append({"ip": ip, "status": f"Failed: {str(e)}"})
-        else:
             collected_data_collection.update_one(
                 {"ip_address": ip}, {"$set": asdict(collected_data)}, upsert=True
             )
-            logger.info(f"[V] Data saved successfully for < {ip} >")
+            logger.info(f"[✓] Data saved for {ip}")
+        except Exception as e:
+            scan_results.append({"ip": ip, "status": f"Failed: {str(e)}"})
 
-    return jsonify(
-        {"message": "Scan and CVE search completed", "results": scan_results}
-    ), 200
-
+    return jsonify({"message": "Scan completed", "results": scan_results}), 200
 
 @app.route("/scan", methods=["GET"])
 def scan() -> tuple[Response, int]:
