@@ -119,11 +119,7 @@ def home():
 
 
 async def main():
-    from windows_tools.installed_software import get_installed_software
-
-    apps = sorted(((software['name'], software['version'], software['publisher']) for software in get_installed_software()), key=lambda x: x[0])
-    print('\n'.join(', '.join(i) for i in sorted(apps)))
-        # print(software['name'], software['version'], software['publisher'])
+        
     config = Config()
     config.bind = ["127.0.0.1:5000"]
     await hypercorn.asyncio.serve(app, config)
