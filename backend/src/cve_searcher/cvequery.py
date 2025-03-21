@@ -15,7 +15,7 @@ class CVEQuery:
     @property
     def product(self) -> str:
         return (
-            normalize_product(self._product)
+            normalize_product(self._product, self.vendor)
             if self.normalize_product
             else self._product
         )

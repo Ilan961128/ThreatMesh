@@ -34,6 +34,7 @@ class OsVersion(Telemetry):
 @dataclass
 class InstalledApplication(Telemetry):
     name: str
+    vendor: str
     version: str
 
     def __post_init__(self) -> None:
@@ -43,7 +44,7 @@ class InstalledApplication(Telemetry):
     @property
     def query(self) -> CVEQuery:
         return CVEQuery(
-            "",
+            self.vendor,
             self.name,
             Version(self.version) if is_version(self.version) else None,
         )

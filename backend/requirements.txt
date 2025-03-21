@@ -1,11 +1,5 @@
-cpe-utils>=0.1.0
-flask>=3.1.0
-hypercorn>=0.17.3
-loguru>=0.7.3
-orjson>=3.10.15
-packaging>=24.2
-pydantic>=2.10.6
-pymongo>=4.11.2
-python-dotenv>=1.0.1
-pytz>=2025.1
-requests>=2.32.3
+Flask
+pymongo
+requests
+hypercorn
+python-dotenv
