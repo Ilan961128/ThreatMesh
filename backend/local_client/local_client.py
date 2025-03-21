@@ -9,12 +9,27 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 LISTEN_PORT = 6612  # Listening port for commands
 
+
+def human_readable_size(size_in_bytes):
+    """Convert bytes to a human-readable format (KB, MB, GB)."""
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if size_in_bytes < 1024:
+            return f"{size_in_bytes:.2f} {unit}"
+        size_in_bytes /= 1024
+
+
 def get_windows_version():
     """Fetch detailed Windows version information."""
     try:
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion") as key:
-            product_name = winreg.QueryValueEx(key, "ProductName")[0]  # e.g., "Windows 10 Home"
-            display_version = winreg.QueryValueEx(key, "DisplayVersion")[0]  # e.g., "23H2"
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+        ) as key:
+            product_name = winreg.QueryValueEx(key, "ProductName")[
+                0
+            ]  # e.g., "Windows 10 Home"
+            display_version = winreg.QueryValueEx(key, "DisplayVersion")[
+                0
+            ]  # e.g., "23H2"
             current_build = winreg.QueryValueEx(key, "CurrentBuild")[0]  # e.g., "22631"
             ubr = winreg.QueryValueEx(key, "UBR")[0]  # Update Build Revision
             # Correct "Windows 10" product name for builds exclusive to Windows 11
@@ -23,19 +38,13 @@ def get_windows_version():
             return {
                 "OS": product_name,
                 "version": display_version,
-                "build": f"{platform.version()}.{ubr}"
+                "build": f"{platform.version()}.{ubr}",
             }
     except FileNotFoundError:
         return {"error": "Unable to fetch Windows version. Registry key not found."}
     except Exception as e:
         return {"error": str(e)}
 
-def human_readable_size(size_in_bytes):
-    """Convert bytes to a human-readable format (KB, MB, GB)."""
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size_in_bytes < 1024:
-            return f"{size_in_bytes:.2f} {unit}"
-        size_in_bytes /= 1024
 
 def check_system_stats():
     """Retrieve system statistics including top 5 memory-hungry running processes, CPU, memory, and disk usage."""
@@ -45,31 +54,33 @@ def check_system_stats():
             "total": human_readable_size(psutil.virtual_memory().total),
             "available": human_readable_size(psutil.virtual_memory().available),
             "used": human_readable_size(psutil.virtual_memory().used),
-            "percent": f"{psutil.virtual_memory().percent}%"
+            "percent": f"{psutil.virtual_memory().percent}%",
         },
         "disk": {
-            "total": human_readable_size(psutil.disk_usage('/').total),
-            "used": human_readable_size(psutil.disk_usage('/').used),
-            "free": human_readable_size(psutil.disk_usage('/').free),
-            "percent": f"{psutil.disk_usage('/').percent}%"
+            "total": human_readable_size(psutil.disk_usage("/").total),
+            "used": human_readable_size(psutil.disk_usage("/").used),
+            "free": human_readable_size(psutil.disk_usage("/").free),
+            "percent": f"{psutil.disk_usage('/').percent}%",
         },
-        "running_processes": []
+        "running_processes": [],
     }
 
     processes = []
     try:
-        for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info']):
-            processes.append({
-                "pid": proc.info['pid'],
-                "name": proc.info['name'],
-                "cpu_percent": f"{proc.info['cpu_percent']}%",
-                "memory_used": proc.info['memory_info'].rss  # Raw memory in bytes
-            })
+        for proc in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info"]):
+            processes.append(
+                {
+                    "pid": proc.info["pid"],
+                    "name": proc.info["name"],
+                    "cpu_percent": f"{proc.info['cpu_percent']}%",
+                    "memory_used": proc.info["memory_info"].rss,  # Raw memory in bytes
+                }
+            )
     except Exception as e:
         print(f"Error retrieving process information: {e}")
 
     # Sort processes by memory used (rss) in descending order and take the top 5
-    top_processes = sorted(processes, key=lambda x: x['memory_used'], reverse=True)[:5]
+    top_processes = sorted(processes, key=lambda x: x["memory_used"], reverse=True)[:5]
 
     # Format memory_used as human-readable
     for proc in top_processes:
@@ -78,28 +89,28 @@ def check_system_stats():
     system_stats["running_processes"] = top_processes
     return system_stats
 
+
 def check_open_ports():
     """Collect only TCP and UDP ports in the Listening state."""
     tcp_ports = []
     udp_ports = []
 
-    for conn in psutil.net_connections(kind='inet'):
+    for conn in psutil.net_connections(kind="inet"):
         try:
             # Collect ports only in the Listening state
             if conn.status == psutil.CONN_LISTEN:
                 port_info = {
                     "port": conn.laddr.port,
-                    "process": psutil.Process(conn.pid).name() if conn.pid else "Unknown"
+                    "process": psutil.Process(conn.pid).name()
+                    if conn.pid
+                    else "Unknown",
                 }
                 if conn.type == socket.SOCK_STREAM:  # TCP
                     tcp_ports.append(port_info)
                 elif conn.type == socket.SOCK_DGRAM:  # UDP
                     udp_ports.append(port_info)
         except psutil.NoSuchProcess:
-            port_info = {
-                "port": conn.laddr.port,
-                "process": "Process not found"
-            }
+            port_info = {"port": conn.laddr.port, "process": "Process not found"}
             if conn.type == socket.SOCK_STREAM:  # TCP
                 tcp_ports.append(port_info)
             elif conn.type == socket.SOCK_DGRAM:  # UDP
@@ -109,26 +120,31 @@ def check_open_ports():
 
     return {"Tcp": tcp_ports, "Udp": udp_ports}
 
+
 def check_installed_apps():
     """Retrieve a list of installed applications with their versions."""
     installed_apps = []
     try:
         for app in winapps.list_installed():
-            installed_apps.append({
-                "name": app.name,
-                "version": app.version if app.version else "Unknown"
-            })
+            installed_apps.append(
+                {"name": app.name, "version": app.version if app.version else "Unknown", "vendor": app.publisher}
+            )
     except Exception as e:
         print(f"Error retrieving installed apps: {e}")
     return installed_apps
+
 
 def check_firewall_state():
     """Check if the Windows Firewall is enabled for each profile."""
     try:
         output = subprocess.check_output(
-            ['powershell', '-Command', 'Get-NetFirewallProfile | Select-Object Name, Enabled'],
+            [
+                "powershell",
+                "-Command",
+                "Get-NetFirewallProfile | Select-Object Name, Enabled",
+            ],
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
         )
         firewall_states = {}
         # Parse the output by ignoring headers and empty lines
@@ -143,14 +159,15 @@ def check_firewall_state():
     except Exception as e:
         return {"error": str(e)}
 
+
 def check_antivirus_status():
     """Retrieve detailed antivirus status for Windows Defender."""
     try:
         # Execute PowerShell command to retrieve antivirus details
         output = subprocess.check_output(
-            ['powershell', '-Command', 'Get-MpComputerStatus | Format-List'],
+            ["powershell", "-Command", "Get-MpComputerStatus | Format-List"],
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
         )
 
         # Parse PowerShell output into a dictionary
@@ -164,20 +181,37 @@ def check_antivirus_status():
         normalized_status = {
             "EngineVersion": status.get("AMEngineVersion", "Unknown"),
             "ProductVersion": status.get("AMProductVersion", "Unknown"),
-            "RealTimeProtection": "Enabled" if status.get("RealTimeProtectionEnabled", "False") == "True" else "Disabled",
-            "Antispyware": "Enabled" if status.get("AntispywareEnabled", "False") == "True" else "Disabled",
-            "AntispywareSignatureLastUpdated": status.get("AntispywareSignatureLastUpdated", "Unknown"),
-            "AntispywareSignatureVersion": status.get("AntispywareSignatureVersion", "Unknown"),
-            "Antivirus": "Enabled" if status.get("AntivirusEnabled", "False") == "True" else "Disabled",
-            "AntivirusSignatureLastUpdated": status.get("AntivirusSignatureLastUpdated", "Unknown"),
-            "AntivirusSignatureVersion": status.get("AntivirusSignatureVersion", "Unknown"),
+            "RealTimeProtection": "Enabled"
+            if status.get("RealTimeProtectionEnabled", "False") == "True"
+            else "Disabled",
+            "Antispyware": "Enabled"
+            if status.get("AntispywareEnabled", "False") == "True"
+            else "Disabled",
+            "AntispywareSignatureLastUpdated": status.get(
+                "AntispywareSignatureLastUpdated", "Unknown"
+            ),
+            "AntispywareSignatureVersion": status.get(
+                "AntispywareSignatureVersion", "Unknown"
+            ),
+            "Antivirus": "Enabled"
+            if status.get("AntivirusEnabled", "False") == "True"
+            else "Disabled",
+            "AntivirusSignatureLastUpdated": status.get(
+                "AntivirusSignatureLastUpdated", "Unknown"
+            ),
+            "AntivirusSignatureVersion": status.get(
+                "AntivirusSignatureVersion", "Unknown"
+            ),
         }
 
         return normalized_status
     except subprocess.CalledProcessError as e:
         return {"error": f"Failed to retrieve Windows Defender status: {str(e)}"}
     except Exception as e:
-        return {"error": f"Unexpected error occurred while retrieving antivirus status: {str(e)}"}
+        return {
+            "error": f"Unexpected error occurred while retrieving antivirus status: {str(e)}"
+        }
+
 
 def check_smb_version():
     """Check the status of SMB1, SMB2, and SMB3 protocols with proper error handling."""
@@ -186,10 +220,17 @@ def check_smb_version():
     # Check SMB1 status
     try:
         smb1_output = subprocess.run(
-            ['powershell', '-Command', 'Get-WindowsOptionalFeature -Online -FeatureName SMB1Protocol'],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
+            [
+                "powershell",
+                "-Command",
+                "Get-WindowsOptionalFeature -Online -FeatureName SMB1Protocol",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
         )
-        
+
         output_text = smb1_output.stdout.strip()
 
         if "State            : Enabled" in output_text:
@@ -211,8 +252,15 @@ def check_smb_version():
     # Check SMB2/SMB3 status
     try:
         smb2_output = subprocess.run(
-            ['powershell', '-Command', 'Get-SmbServerConfiguration | Select-Object EnableSMB2Protocol'],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
+            [
+                "powershell",
+                "-Command",
+                "Get-SmbServerConfiguration | Select-Object EnableSMB2Protocol",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
         )
 
         smb_status["SMB2_enabled"] = "True" in smb2_output.stdout
@@ -225,42 +273,60 @@ def check_smb_version():
 
     return smb_status
 
+
 def check_rdp_settings():
     """Check if RDP is enabled and retrieve its listening port."""
     try:
         # Check if RDP is enabled
         registry_output = subprocess.check_output(
-            ['powershell', '-Command', 'Get-ItemProperty -Path "HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server" | Select-Object -ExpandProperty fDenyTSConnections'],
+            [
+                "powershell",
+                "-Command",
+                'Get-ItemProperty -Path "HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server" | Select-Object -ExpandProperty fDenyTSConnections',
+            ],
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
         )
-        rdp_enabled = registry_output.strip() == '0'  # fDenyTSConnections = 0 means RDP is enabled
+        rdp_enabled = (
+            registry_output.strip() == "0"
+        )  # fDenyTSConnections = 0 means RDP is enabled
 
         # Query the RDP port number explicitly
         port_output = subprocess.check_output(
-            ['powershell', '-Command', '(Get-ItemProperty -Path "HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp").PortNumber'],
+            [
+                "powershell",
+                "-Command",
+                '(Get-ItemProperty -Path "HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp").PortNumber',
+            ],
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
         )
-        port_number = int(port_output.strip()) if port_output.strip().isdigit() else None
+        port_number = (
+            int(port_output.strip()) if port_output.strip().isdigit() else None
+        )
 
         return {
             "rdp_enabled": rdp_enabled,
             "rdp_port": port_number,
-            "status": f"RDP is enabled and listening on port {port_number}" if rdp_enabled and port_number else "RDP is enabled but no listening port found."
+            "status": f"RDP is enabled and listening on port {port_number}"
+            if rdp_enabled and port_number
+            else "RDP is enabled but no listening port found.",
         }
     except subprocess.CalledProcessError as e:
         return {"error": f"Failed to retrieve RDP settings: {str(e)}"}
     except Exception as e:
-        return {"error": f"Unexpected error occurred while retrieving RDP settings: {str(e)}"}
+        return {
+            "error": f"Unexpected error occurred while retrieving RDP settings: {str(e)}"
+        }
+
 
 def check_local_users():
     """Retrieve a list of local users on the system."""
     try:
         output = subprocess.check_output(
-            ['powershell', '-Command', 'Get-LocalUser | Select-Object Name, Enabled'],
+            ["powershell", "-Command", "Get-LocalUser | Select-Object Name, Enabled"],
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
         )
         users = []
         lines = output.strip().splitlines()
@@ -272,29 +338,42 @@ def check_local_users():
     except Exception as e:
         return {"error": str(e)}
 
+
 def check_shared_folders():
     """Retrieve a list of shared folders on the system."""
     try:
         output = subprocess.check_output(
-            ['powershell', '-Command', 'Get-SmbShare | Select-Object Name, Path, Description'],
+            [
+                "powershell",
+                "-Command",
+                "Get-SmbShare | Select-Object Name, Path, Description",
+            ],
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
         )
         shares = []
         lines = output.strip().splitlines()
 
         # Skip header lines and validate each row
         for line in lines[1:]:  # Skip the header row
-            parts = line.split(None, 2)  # Split into at most 3 parts (Name, Path, Description)
-            if len(parts) >= 2 and parts[0] not in ["----", ""]:  # Exclude invalid or header-like rows
-                shares.append({
-                    "name": parts[0],
-                    "path": parts[1],
-                    "description": parts[2] if len(parts) > 2 else ""
-                })
+            parts = line.split(
+                None, 2
+            )  # Split into at most 3 parts (Name, Path, Description)
+            if len(parts) >= 2 and parts[0] not in [
+                "----",
+                "",
+            ]:  # Exclude invalid or header-like rows
+                shares.append(
+                    {
+                        "name": parts[0],
+                        "path": parts[1],
+                        "description": parts[2] if len(parts) > 2 else "",
+                    }
+                )
         return shares
     except Exception as e:
         return {"error": str(e)}
+
 
 def collect_data():
     """Collect system information and check for misconfigurations."""
@@ -320,27 +399,29 @@ def collect_data():
         "smb_status": smb_status,
         "rdp_settings": rdp_settings,
         "local_users": local_users,
-        "shared_folders": shared_folders
+        "shared_folders": shared_folders,
     }
     print("Collected Data:", json.dumps(data, indent=2))  # Debug output
     return data
+
 
 def save_data_locally(data):
     """Save the collected data to a local JSON file."""
     with open("collected_data.json", "w") as f:
         json.dump(data, f, indent=4)
 
+
 class AgentHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         """Handle POST requests."""
         if self.path == "/":
-            content_length = int(self.headers['Content-Length'])
-            post_data = json.loads(self.rfile.read(content_length).decode('utf-8'))
+            content_length = int(self.headers["Content-Length"])
+            post_data = json.loads(self.rfile.read(content_length).decode("utf-8"))
 
             if post_data.get("command") == "SCAN":
                 print("Received SCAN command. Collecting data...")
                 data = collect_data()
-                
+
                 # Save locally to collected_data.json
                 with open("collected_data.json", "w") as f:
                     json.dump(data, f, indent=4)
@@ -359,12 +440,14 @@ class AgentHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+
 def run_agent():
     """Start the agent's HTTP server."""
-    server_address = ('0.0.0.0', LISTEN_PORT)
+    server_address = ("0.0.0.0", LISTEN_PORT)
     httpd = HTTPServer(server_address, AgentHandler)
     print(f"Agent listening on port {LISTEN_PORT}...")
     httpd.serve_forever()
+
 
 if __name__ == "__main__":
     print("Starting client agent...")
