@@ -311,7 +311,6 @@ def search_vulnerabilities(
     Yields:
         Iterator[CVEMatch]: CVE Matches found
     """
-    breakpoint()
     yield from filter(
         lambda cvematch: cvematch.confidence_score >= threshhold,
         (

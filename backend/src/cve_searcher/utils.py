@@ -34,9 +34,8 @@ def normalize_product(product: str, vendor: str = '') -> str:
     Returns:
         str: Normalized app name
     """
-    for s in vendor.split():
-        if s in product:
-            product = product.replace(s, '')
+    if vendor in product:
+        product = product.replace(vendor, '')
         
     removed_versions = " ".join(
         filter(lambda part: not is_version(part), product.strip().split())
