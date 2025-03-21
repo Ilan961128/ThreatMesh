@@ -1,7 +1,7 @@
 from typing import Iterable, Optional
 from packaging.version import Version
 from cpe_utils import CPE
-
+from re import sub
 from src.cve_searcher.cpematch import CPEMatch, is_version
 
 APPNAME_ESCAPES_MAP: dict[str, str] = {
@@ -24,7 +24,7 @@ def greater_version(*versions: Version) -> str:
     return max(versions)
 
 
-def normalize_product(product: str) -> str:
+def normalize_product(product: str, vendor: str = '') -> str:
     """
     Normalize app name for search, using APPNAME_ESCAPES_MAP
 
@@ -34,21 +34,20 @@ def normalize_product(product: str) -> str:
     Returns:
         str: Normalized app name
     """
+    for s in vendor.split():
+        if s in product:
+            product = product.replace(s, '')
+        
     removed_versions = " ".join(
-        filter(lambda part: not is_version(part), product.split())
+        filter(lambda part: not is_version(part), product.strip().split())
     )  # Remove any version
 
     removed_non_ascii = " ".join(
         filter(lambda part: all(ord(c) < 128 for c in part), removed_versions.split())
     )  # Remove any non english
 
-    removed_parenthesis = " ".join(
-        filter(
-            lambda part: not (part[0] == "(" and part[1] == ")"),
-            removed_non_ascii.split(),
-        )
-    )  # Remove any string inside parenthesis
-
+    removed_parenthesis = sub(r'\([^)]*\)', '', removed_non_ascii).strip() # Remove any string inside parenthesis
+    
     removed_after_minus, _, _ = removed_parenthesis.partition(
         "-"
     )  # Remove anything after -, usually extra info
@@ -61,8 +60,8 @@ def normalize_product(product: str) -> str:
                 break
         else:
             out += char
-
-    return out
+    
+    return out.strip()
 
 
 def extract_cpe_from_cve(cve: dict) -> Iterable[CPEMatch]:
@@ -100,4 +99,4 @@ def is_application_name_in_cpe(application_name: str, cpe: Optional[CPE]) -> boo
 
 
 def is_vendor_name_in_cpe(vendor_name: str, cpe: Optional[CPE]) -> bool:
-    return (bool(cpe) and vendor_name.lower() == cpe.vendor) and not bool(vendor_name)
+    return (bool(cpe) and vendor_name.lower() == cpe.vendor) or not bool(vendor_name)
